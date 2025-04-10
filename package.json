@@ -1,0 +1,135 @@
+import { useState, useRef } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { saveAs } from 'file-saver';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+
+export default function LegoCadAIPrototype() {
+  const [description, setDescription] = useState("");
+  const [size, setSize] = useState("");
+  const [image, setImage] = useState(null);
+  const [result, setResult] = useState(null);
+  const resultRef = useRef(null);
+  const [savedProjects, setSavedProjects] = useState([]);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setImage(imageUrl);
+    }
+  };
+
+  const generateModel = () => {
+    setResult({
+      image: "/lego-model-preview.png",
+      parts: [
+        { name: "2x4 Brick", color: "Red", quantity: 20 },
+        { name: "1x2 Plate", color: "Blue", quantity: 15 },
+        { name: "Wheel", color: "Black", quantity: 4 },
+      ],
+      instructions: [
+        "Start with a 2x4 red brick as the base.",
+        "Attach two blue 1x2 plates to each side.",
+        "Add the wheels to the corners.",
+        "Stack another 2x4 red brick on top."
+      ]
+    });
+  };
+
+  const exportToPDF = async () => {
+    if (resultRef.current) {
+      const canvas = await html2canvas(resultRef.current);
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF();
+      pdf.addImage(imgData, 'PNG', 10, 10, 190, 0);
+      pdf.save("lego-model.pdf");
+    }
+  };
+
+  const saveProject = () => {
+    setSavedProjects([...savedProjects, { description, size, image, result }]);
+    alert("Project saved successfully!");
+  };
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">LEGO-CAD AI</h1>
+      <p className="mb-6">Describe what you want to build and let the AI generate a LEGO-compatible model with instructions and a parts list.</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <Input 
+          placeholder="e.g., A small spaceship or red sports car" 
+          value={description} 
+          onChange={(e) => setDescription(e.target.value)} 
+        />
+        <Input 
+          placeholder="Desired size (inches or cm)" 
+          value={size} 
+          onChange={(e) => setSize(e.target.value)} 
+        />
+      </div>
+
+      <div className="mb-6">
+        <Label className="block mb-2">Upload Image (optional)</Label>
+        <Input type="file" accept="image/*" onChange={handleImageUpload} />
+        {image && <img src={image} alt="Uploaded preview" className="mt-4 max-w-xs rounded" />}
+      </div>
+
+      <Button onClick={generateModel}>Generate LEGO Model</Button>
+
+      {result && (
+        <div className="mt-10" ref={resultRef}>
+          <h2 className="text-2xl font-semibold mb-4">Model Preview, Instructions & Parts List</h2>
+          <Card className="mb-4">
+            <CardContent>
+              <img src={result.image} alt="LEGO model preview" className="w-full max-w-md" />
+              <div className="w-full h-64 mt-4 bg-gray-200 flex items-center justify-center text-gray-500">
+                {/* Placeholder for live 3D viewer */}
+                Live 3D Viewer Coming Soon
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="bg-white p-4 rounded-xl shadow mb-6">
+            <h3 className="text-lg font-medium mb-2">Step-by-Step Instructions</h3>
+            <ol className="list-decimal pl-6">
+              {result.instructions.map((step, index) => (
+                <li key={index} className="mb-1">{step}</li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl shadow mb-4">
+            <h3 className="text-lg font-medium mb-2">Required Bricks</h3>
+            <ul className="list-disc pl-6">
+              {result.parts.map((part, index) => (
+                <li key={index}>{part.quantity}x {part.color} {part.name}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex gap-4">
+            <Button onClick={exportToPDF}>Export to PDF</Button>
+            <Button onClick={saveProject}>Save Project</Button>
+          </div>
+        </div>
+      )}
+
+      {savedProjects.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-2xl font-semibold mb-4">Saved Projects</h2>
+          <ul className="list-disc pl-6">
+            {savedProjects.map((project, index) => (
+              <li key={index}>{project.description} ({project.size})</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
